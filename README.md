@@ -2,7 +2,7 @@
 
 ## github repo clone
 ```bash
-git clone https://github.com/Yan2266336/FinBen.git --recursive
+git clone https://github.com/TheDataMiningLab/FinBen.git --recursive
 ```
 
 ## set environment
