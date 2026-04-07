@@ -1,116 +1,132 @@
-# FinBen: Financial Benchmark for Language Models
+## create your project fork from https://github.com/The-FinAI/FinBen
 
-FinBen is a comprehensive benchmark suite designed to evaluate the performance of large language models (LLMs) in financial contexts. It provides a collection of tasks and datasets tailored to assess various aspects of financial reasoning and understanding.
+## github repo clone
+```bash
+git clone https://github.com/Yan2266336/FinBen.git --recursive
+```
 
-## Features
+## set environment
+```bash
+conda create -n finben python=3.12
+conda activate finben
+```
 
-- **Diverse Financial Tasks**: FinBen includes a wide range of tasks covering areas such as financial document analysis, quantitative reasoning, and domain-specific language understanding.
+```bash
+cd FinBen/finlm_eval/
+pip install -e .
+pip install -e .[vllm]
+pip install -e .[api]
+```
 
-- **Standardized Evaluation**: The benchmark offers standardized metrics and evaluation protocols, enabling consistent and reproducible assessments of LLMs in financial applications.
-
-- **Integration with Evaluation Frameworks**: FinBen is compatible with existing evaluation frameworks, facilitating seamless integration into model assessment pipelines.
-
-## Installation
-
-To set up the FinBen environment, follow these steps:
-
-1. **Clone the Repository**:
-
-   ```bash
-   git clone https://github.com/The-FinAI/FinBen.git
-   cd FinBen/finlm_eval/
-   ```
-
-2. **Create and Activate a Conda Environment**:
-
-   ```bash
-   conda create -n finben python=3.12
-   conda activate finben
-   ```
-
-3. **Install Dependencies**:
-
-   ```bash
-   pip install -e .
-   pip install -e .[vllm]
-   ```
-
-## Usage
-
-### Logging into Hugging Face
-
-Set your Hugging Face token as an environment variable:
-
+## login to your huggingface
 ```bash
 export HF_TOKEN="your_hf_token"
 ```
+## verify it
+```bash
+echo $HF_TOKEN
+```
 
-### Model Evaluation
+## model evaluation
+```bash
+cd FinBen/
+```
+### for GPT model
+```bash
+lm_eval --model openai-chat-completions\
+        --model_args "model=gpt-4o" \
+        --tasks GRQAGen \
+        --output_path results \
+        --use_cache ./cache \
+        --hf_hub_log_args "hub_results_org=TheFinAI,details_repo_name=lm-eval-results,push_results_to_hub=True,push_samples_to_hub=True,public_repo=False" \
+        --log_samples \
+        --apply_chat_template \
+        --include_path ./tasks
+```
 
-1. **Navigate to the FinBen Directory**:
+### for small model
+```bash
+lm_eval --model hf \
+        --model_args "pretrained=Qwen/Qwen2.5-0.5B" \
+        --tasks regAbbreviation \
+        --num_fewshot 0 \
+        --device cuda:1 \
+        --batch_size 8 \
+        --output_path results \
+        --hf_hub_log_args "hub_results_org=TheFinAI,details_repo_name=lm-eval-reAbbr-0shot-results,push_results_to_hub=True,push_samples_to_hub=True,public_repo=False" \
+        --log_samples \
+        --apply_chat_template \
+        --include_path ./tasks
+```
 
-   ```bash
-   cd FinBen/
-   ```
+### for large model
+```bash
+export VLLM_WORKER_MULTIPROC_METHOD="spawn"
+```
+```bash
+lm_eval --model vllm \
+        --model_args "pretrained=google/gemma-2-27b-it,tensor_parallel_size=4,gpu_memory_utilization=0.8,max_model_len=1024" \
+        --tasks GRQA \
+        --batch_size auto \
+        --output_path results \
+        --hf_hub_log_args "hub_results_org=TheFinAI,details_repo_name=lm-eval-results,push_results_to_hub=True,push_samples_to_hub=True,public_repo=False" \
+        --log_samples \
+        --apply_chat_template \
+        --include_path ./tasks
+        
+lm_eval --model vllm \
+        --model_args "pretrained=meta-llama/Llama-3.2-1B-Instruct,tensor_parallel_size=4,gpu_memory_utilization=0.8,max_length=8192" \
+        --tasks GRFNS2023 \
+        --batch_size auto \
+        --output_path results \
+        --hf_hub_log_args "hub_results_org=TheFinAI,details_repo_name=lm-eval-results,push_results_to_hub=True,push_samples_to_hub=True,public_repo=False" \
+        --log_samples \
+        --apply_chat_template \
+        --include_path ./tasks
+```
+***results will be saved to FinBen/results/, you could add it into .gitignore***
 
-2. **Set the VLLM Worker Multiprocessing Method**:
+- **0-shot setting:** Use `num_fewshot=0` and `lm-eval-results-gr-0shot` as the results repository.
+- **5-shot setting:** Use `num_fewshot=5` and `lm-eval-results-gr-5shot` as the results repository.
+- **Base models:** Remove `apply_chat_template`.
+- **Instruction models:** Use `apply_chat_template`.
 
-   ```bash
-   export VLLM_WORKER_MULTIPROC_METHOD="spawn"
-   ```
+## add new task
+```bash
+cd FinBen/tasks/your_project_folder/ # create yaml file for new task
+```
 
-3. **Run Evaluation**:
+### For example
+```bash
+cd FinBen/tasks/fortune/ # create yaml file for new task
+```
+- **lm-evaluation-harness/docs/task_guide.md** # Good Reference Tasks
 
-   ```bash
-   lm-eval --model hf-causal-experimental \
-           --model_args pretrained=Qwen/Qwen2.5-72B-Instruct,trust_remote_code=True \
-           --tasks plutus \
-           --num_fewshot 0 \
-           --batch_size 8 \
-           --output_path ./results/YourProject/YourModelName
-   ```
 
-**Important Notes**:
+## if push to leaderboard
+```bash
+vim FinBen/aggregate.py  #change to your project huggingface repos in line 415 and 42
+```
 
-- **Few-Shot Settings**:
-  - *0-shot*: Use `--num_fewshot 0` and direct results to a corresponding repository.
-  - *5-shot*: Use `--num_fewshot 5` and direct results to a corresponding repository.
+## new model
+```bash
+vim FinBen/aggregate.py # add new model configuration to MODEL_DICT
 
-- **Model Variants**:
-  - *Base Models*: Omit the `apply_chat_template` argument.
-  - *Chat Models*: Include the `apply_chat_template` argument.
+python aggregate.py
+```
+**https://huggingface.co/spaces/open-llm-leaderboard/open_llm_leaderboard#/?search=qwen2.5-1.5b-instruct**
+**https://mot.isitopen.ai/**
 
-## Greek Financial Application: Plutus
+## new task
+```bash
+vim FinBen/aggregate.py ##add new task to METRIC_DICT # for classification task, change 1.0 / 6.0 to your baseline
 
-FinBen has been extended to address the unique challenges of the Greek financial domain through the Plutus initiative. This extension recognizes the linguistic complexity of Greek and the scarcity of domain-specific datasets, aiming to improve LLM performance in Greek financial contexts.
+python aggregate.py
+```
+### huggingface leaderboard part
+#### backend/app/services/leaderboard.py
+#### frontend/src/pages/LeaderboardPage/components/Leaderboard/utils/columnUtils.js
+#### frontend/src/pages/LeaderboardPage/components/Leaderboard/constants/tooltips.js
+#### frontend/src/pages/LeaderboardPage/components/Leaderboard/constants/defaults.js
+#### frontend/src/pages/QuotePage/QuotePage.js
 
-### Plutus Components
-
-- **Plutus-ben**: A Greek Financial Evaluation Benchmark encompassing five core financial NLP tasks:
-  - Numeric Named Entity Recognition (NER)
-  - Textual NER
-  - Question Answering (QA)
-  - Abstractive Summarization
-  - Topic Classification
-
-  These tasks facilitate systematic and reproducible assessments of LLMs in the Greek financial domain.
-
-### Significance
-
-The Plutus initiative addresses the absence of dedicated Greek financial benchmarks and specialized Greek finance LLMs. By focusing on a low-resource language in finance, Plutus highlights the need for specialized training to understand and generate Greek financial language with nuance and accuracy. This effort ensures that Greek finance is not left behind in the AI revolution.
-
-## Contributing
-
-We welcome contributions to FinBen. If you're interested in adding new tasks, improving existing ones, or providing feedback, please open an issue or submit a pull request.
-
-## License
-
-This project is licensed under the [MIT License](LICENSE.md).
-
-## Acknowledgments
-
-We extend our gratitude to the developers of the [lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness) for providing a robust framework that inspired and facilitated the development of FinBen.
-
----
-
-*For more information, visit our [GitHub repository](https://github.com/The-FinAI/FinBen).*
